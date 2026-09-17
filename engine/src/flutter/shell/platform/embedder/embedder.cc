@@ -286,6 +286,14 @@ static const flutter::DlIRect FlutterRectToDlIRect(FlutterRect flutter_rect) {
 #define GL_BGRA8_EXT 0x93A1
 #endif
 
+// And GL_RGBA8 for the same reason, which on every other GL target arrives
+// through a platform header this file never includes. GLES2 does not define
+// the sized internal formats at all -- they are GL_RGBA8_OES there -- so on
+// the Vita nothing supplies it.
+#ifndef GL_RGBA8
+#define GL_RGBA8 0x8058
+#endif
+
 static std::optional<SkColorType> FlutterFormatToSkColorType(uint32_t format) {
   switch (format) {
     case GL_BGRA8_EXT:
@@ -486,6 +494,15 @@ InferOpenGLPlatformViewCreationCallback(
            std::move(external_view_embedder)](flutter::Shell& shell) mutable {
         std::shared_ptr<flutter::EmbedderExternalViewEmbedder> view_embedder =
             std::move(external_view_embedder);
+        // A runtime branch on a class that is not always compiled.
+        //
+        // BUILD.gn adds embedder_surface_gl_impeller.cc only when
+        // impeller_supports_rendering is true, and this reference is not
+        // guarded to match -- so shell_enable_gl=true with Impeller off does
+        // not link. Upstream never builds that combination; the Vita does,
+        // because Impeller has no software fallback and nothing here needs it.
+        // Same gate as BUILD.gn already applies, one level up.
+#ifdef IMPELLER_SUPPORTS_RENDERING
         if (enable_impeller) {
           return std::make_unique<flutter::PlatformViewEmbedder>(
               shell,                   // delegate
@@ -497,6 +514,9 @@ InferOpenGLPlatformViewCreationCallback(
               view_embedder             // external view embedder
           );
         }
+#else
+        (void)enable_impeller;
+#endif  // IMPELLER_SUPPORTS_RENDERING
         return std::make_unique<flutter::PlatformViewEmbedder>(
             shell,                   // delegate
             shell.GetTaskRunners(),  // task runners
