@@ -17,6 +17,34 @@
 #include "third_party/tonic/dart_library_natives.h"
 #include "third_party/tonic/logging/dart_invoke.h"
 
+#if defined(FML_OS_VITA)
+#include <chrono>
+
+// Where the 850 us in a `Text` goes. ADR-0017.
+//
+// A route push that builds 48 Text widgets spends 41 ms on the UI thread; the
+// same 48 glyphs in one Text cost 1 ms. So the cost is per-paragraph and flat,
+// and the only way to name which part of "per-paragraph" is to time the parts
+// -- this port has no profiler, no timeline and no DevTools.
+//
+// Three phases, because they fail differently: construction resolves the text
+// style and the font, build hands the runs to the shaper, layout breaks lines.
+// The embedder prints these with its loop statistics and zeroes them.
+extern "C" {
+uint64_t vita_para_ctor_us = 0;
+uint64_t vita_para_build_us = 0;
+uint64_t vita_para_layout_us = 0;
+uint32_t vita_para_count = 0;
+}
+
+uint64_t VitaNowUs() {
+  return static_cast<uint64_t>(
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          std::chrono::steady_clock::now().time_since_epoch())
+          .count());
+}
+#endif
+
 namespace flutter {
 
 IMPLEMENT_WRAPPERTYPEINFO(ui, Paragraph);
@@ -59,7 +87,13 @@ bool Paragraph::didExceedMaxLines() {
 }
 
 void Paragraph::layout(double width) {
+#if defined(FML_OS_VITA)
+  const uint64_t t0 = VitaNowUs();
+#endif
   m_paragraph_->Layout(width);
+#if defined(FML_OS_VITA)
+  vita_para_layout_us += VitaNowUs() - t0;
+#endif
 }
 
 void Paragraph::paint(Canvas* canvas, double x, double y) {

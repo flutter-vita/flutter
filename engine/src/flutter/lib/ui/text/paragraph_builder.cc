@@ -27,6 +27,16 @@
 #include "third_party/tonic/dart_library_natives.h"
 #include "third_party/tonic/typed_data/dart_byte_data.h"
 
+#if defined(FML_OS_VITA)
+// Defined in paragraph.cc, next to the note explaining why these exist.
+extern "C" {
+extern uint64_t vita_para_ctor_us;
+extern uint64_t vita_para_build_us;
+extern uint32_t vita_para_count;
+}
+uint64_t VitaNowUs();
+#endif
+
 namespace flutter {
 namespace {
 
@@ -227,6 +237,9 @@ ParagraphBuilder::ParagraphBuilder(
     double height,
     const std::u16string& ellipsis,
     const std::string& locale) {
+#if defined(FML_OS_VITA)
+  const uint64_t t0 = VitaNowUs();
+#endif
   int32_t mask = 0;
   txt::ParagraphStyle style;
   {
@@ -295,6 +308,10 @@ ParagraphBuilder::ParagraphBuilder(
   auto impeller_enabled = UIDartState::Current()->IsImpellerEnabled();
   m_paragraph_builder_ = txt::ParagraphBuilder::CreateSkiaBuilder(
       style, font_collection.GetFontCollection(), impeller_enabled);
+#if defined(FML_OS_VITA)
+  vita_para_ctor_us += VitaNowUs() - t0;
+  vita_para_count++;
+#endif
 }
 
 ParagraphBuilder::~ParagraphBuilder() = default;
@@ -525,9 +542,15 @@ void ParagraphBuilder::addPlaceholder(double width,
 }
 
 void ParagraphBuilder::build(Dart_Handle paragraph_handle) {
+#if defined(FML_OS_VITA)
+  const uint64_t t0 = VitaNowUs();
+#endif
   Paragraph::Create(paragraph_handle, m_paragraph_builder_->Build());
   m_paragraph_builder_.reset();
   ClearDartWrapper();
+#if defined(FML_OS_VITA)
+  vita_para_build_us += VitaNowUs() - t0;
+#endif
 }
 
 }  // namespace flutter
