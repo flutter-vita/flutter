@@ -8,6 +8,7 @@
 
 #include "flow/surface_frame.h"
 #include "flutter/fml/logging.h"
+#include "flutter/fml/time/time_point.h"
 
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkSurface.h"
@@ -48,6 +49,32 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
     return nullptr;
   }
 
+  // Partial repaint, when the delegate can promise the buffer survives.
+  //
+  // `existing_damage` is the area of the buffer we are about to draw into that
+  // lags behind what is on screen -- the thing an embedder has to track per
+  // back buffer when it is double or triple buffered. A delegate that hands
+  // back the same surface every frame has no such lag, so the honest answer is
+  // an *empty* rect, not nullopt: nullopt means "unknown", and the rasterizer
+  // reads it as "repaint everything".
+  if (delegate_ != nullptr && delegate_->BackingStoreRetainsPreviousFrame()) {
+    framebuffer_info.supports_partial_repaint = true;
+    framebuffer_info.existing_damage = DlIRect();
+  }
+
+  // The raster pass starts here, and the timestamp is captured *into the encode
+  // callback below* rather than parked in a static.
+  //
+  // The first version used a file static, on the reasoning that the raster
+  // thread runs one frame at a time so nothing could race. That is true and
+  // still wrong: AcquireFrame is not guaranteed to be followed by an encode.
+  // When a frame is acquired and then dropped, the next frame's encode reads
+  // the *previous* frame's start time, and the pass appears to have taken as
+  // long as the gap between them. It showed up immediately -- a raster max of
+  // 3,023,406 us on a 55 fps window, alongside the two idle gaps that produced
+  // it, and a mean of 442% of a frame.
+  const fml::TimePoint raster_start = fml::TimePoint::Now();
+
   const auto size = DlISize(logical_size.width, logical_size.height);
 
   sk_sp<SkSurface> backing_store = delegate_->AcquireBackingStore(size);
@@ -68,14 +95,20 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
   canvas->resetMatrix();
 
   SurfaceFrame::EncodeCallback encode_callback =
-      [self = weak_factory_.GetWeakPtr()](const SurfaceFrame& surface_frame,
-                                          DlCanvas* canvas) -> bool {
+      [self = weak_factory_.GetWeakPtr(), raster_start](
+          const SurfaceFrame& surface_frame, DlCanvas* canvas) -> bool {
     // If the surface itself went away, there is nothing more to do.
     if (!self || !self->IsValid() || canvas == nullptr) {
       return false;
     }
 
     canvas->Flush();
+
+    // After Flush, not before: Flush is where a deferred display list is
+    // actually executed, so timing that returns before it measures the
+    // bookkeeping and not the painting.
+    self->delegate_->OnRasterTiming(static_cast<uint64_t>(
+        (fml::TimePoint::Now() - raster_start).ToMicroseconds()));
     return true;
   };
   SurfaceFrame::SubmitCallback submit_callback =
@@ -84,6 +117,9 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
         if (!self || !self->IsValid()) {
           return false;
         }
+        // Reported before the present rather than passed through it, so that a
+        // delegate which does not care needs no signature change.
+        self->delegate_->OnFrameDamage(surface_frame.submit_info().frame_damage);
         return self->delegate_->PresentBackingStore(
             surface_frame.SkiaSurface());
       };

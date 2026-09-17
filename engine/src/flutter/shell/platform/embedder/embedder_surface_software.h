@@ -8,6 +8,7 @@
 #include "flutter/fml/macros.h"
 #include "flutter/shell/gpu/gpu_surface_software.h"
 #include "flutter/shell/platform/embedder/embedder_external_view_embedder.h"
+#include "flutter/shell/platform/embedder/embedder_software_frame_damage.h"
 #include "flutter/shell/platform/embedder/embedder_surface.h"
 
 #include "third_party/skia/include/core/SkSurface.h"
@@ -48,6 +49,15 @@ class EmbedderSurfaceSoftware final : public EmbedderSurface,
 
   // |GPUSurfaceSoftwareDelegate|
   bool PresentBackingStore(sk_sp<SkSurface> backing_store) override;
+
+  // |GPUSurfaceSoftwareDelegate|
+  bool BackingStoreRetainsPreviousFrame() const override;
+
+  // |GPUSurfaceSoftwareDelegate|
+  void OnFrameDamage(const std::optional<DlIRect>& damage) override;
+
+  // |GPUSurfaceSoftwareDelegate|
+  void OnRasterTiming(uint64_t raster_us) override;
 
   FML_DISALLOW_COPY_AND_ASSIGN(EmbedderSurfaceSoftware);
 };
