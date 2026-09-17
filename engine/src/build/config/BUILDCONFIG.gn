@@ -199,6 +199,12 @@ declare_args() {
 # aix or one of the BSDs. If you need to check these, just check the
 # current_os value directly.
 
+# Not part of the upstream is_* set, and deliberately declared once here rather
+# than as a `false` line in each branch below: the chain is edited by upstream
+# rolls, and a variant that lives outside it does not have to be re-added every
+# time. Same shape as the Dart SDK's copy of this file (patch 0004).
+is_vita = current_os == "vita"
+
 if (current_os == "win") {
   is_android = false
   is_chromeos = false
@@ -322,6 +328,25 @@ if (current_os == "win") {
   is_win = false
   is_wasm = false
   is_qnx = true
+} else if (current_os == "vita") {
+  # PlayStation Vita homebrew (VitaSDK, arm-vita-eabi, newlib).
+  #
+  # Deliberately not is_posix. newlib plus sceKernel is not POSIX, and claiming
+  # otherwise makes GN hand us every *_posix.cc source in the tree -- files that
+  # reference mmap, dlopen, fork and signals, none of which exist here. Phase 1
+  # established this for the Dart runtime; it holds for the engine for the same
+  # reason.
+  is_android = false
+  is_chromeos = false
+  is_fuchsia = false
+  is_fuchsia_host = false
+  is_ios = false
+  is_linux = false
+  is_mac = false
+  is_posix = false
+  is_win = false
+  is_wasm = false
+  is_qnx = false
 }
 
 is_apple = is_ios || is_mac
@@ -645,6 +670,16 @@ if (custom_toolchain != "") {
 } else if (is_qnx) {
   host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
   set_default_toolchain("//build/toolchain/qnx")
+} else if (is_vita) {
+  assert(current_cpu == "arm", "Vita is armv7 only")
+  if (host_os == "mac") {
+    host_toolchain = "//build/toolchain/mac:clang_$host_cpu"
+  } else if (host_os == "linux") {
+    host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
+  } else {
+    assert(false, "Unknown host for vita cross compile")
+  }
+  set_default_toolchain("//build/toolchain/vita:arm")
 } else {
   assert(false, "Toolchain not set because of unknown platform.")
 }
