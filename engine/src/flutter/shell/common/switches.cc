@@ -42,6 +42,14 @@ struct SwitchDesc {
 static const std::string kAllowedDartFlags[] = {
     "--enable-isolate-groups",
     "--no-enable-isolate-groups",
+#if defined(__vita__)
+    // Vita port. The console has no observatory and no profiler, and the VM's
+    // own GC report is the only account of collection pauses there is. A
+    // product flag, printed through OS::PrintErr, which the embedder routes
+    // into the app log. The embedder passes it only when asked
+    // (ux0:data/flutter-vita/gc.on).
+    "--verbose_gc",
+#endif
 };
 // clang-format on
 
