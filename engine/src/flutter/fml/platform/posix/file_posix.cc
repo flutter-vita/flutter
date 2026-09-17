@@ -6,7 +6,11 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#if !defined(__vita__)
+// Included but unused -- nothing in this file maps anything. The Vita has no
+// <sys/mman.h> at all, so the include cannot simply stay.
 #include <sys/mman.h>
+#endif
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -19,6 +23,94 @@
 #include "flutter/fml/mapping.h"
 #include "flutter/fml/trace_event.h"
 #include "flutter/fml/unique_fd.h"
+
+#if defined(FML_OS_VITA)
+#include "flutter/fml/platform/vita/dir_fd_vita.h"
+
+// The *at* family, re-expressed as path resolution.
+//
+// This platform has no directory descriptors, so each of these turns
+// (dirfd, relative) into an absolute path via the registry and then calls the
+// plain form. An unresolvable dirfd yields an empty path and the call fails,
+// which is the point: the alternative is resolving against the process cwd and
+// quietly operating on the wrong file. See dir_fd_vita.h.
+namespace {
+
+// mode defaults because openat is variadic and O_DIRECTORY callers omit it.
+int VitaOpenAt(int dirfd, const char* path, int flags, int mode = 0) {
+  const std::string resolved = fml::VitaResolveAt(dirfd, path);
+  if (resolved.empty()) {
+    errno = EBADF;
+    return -1;
+  }
+  // O_DIRECTORY is the one flag that cannot be passed through: sceIo will not
+  // open a directory as a file. Hand back a registry token instead, which is
+  // what every subsequent *at* call against it expects.
+  if ((flags & O_DIRECTORY) != 0) {
+    const int fd = fml::VitaOpenDirFd(resolved);
+    if (fd < 0) {
+      errno = ENOENT;
+    }
+    return fd;
+  }
+  return ::open(resolved.c_str(), flags, mode);
+}
+
+int VitaMkdirAt(int dirfd, const char* path, int mode) {
+  const std::string resolved = fml::VitaResolveAt(dirfd, path);
+  if (resolved.empty()) {
+    errno = EBADF;
+    return -1;
+  }
+  return ::mkdir(resolved.c_str(), mode);
+}
+
+int VitaUnlinkAt(int dirfd, const char* path, int flags) {
+  const std::string resolved = fml::VitaResolveAt(dirfd, path);
+  if (resolved.empty()) {
+    errno = EBADF;
+    return -1;
+  }
+  return (flags & AT_REMOVEDIR) != 0 ? ::rmdir(resolved.c_str())
+                                     : ::unlink(resolved.c_str());
+}
+
+int VitaAccessAt(int dirfd, const char* path, int mode) {
+  const std::string resolved = fml::VitaResolveAt(dirfd, path);
+  if (resolved.empty()) {
+    errno = EBADF;
+    return -1;
+  }
+  return ::access(resolved.c_str(), mode);
+}
+
+int VitaRenameAt(int from_dirfd,
+                 const char* from,
+                 int to_dirfd,
+                 const char* to) {
+  const std::string resolved_from = fml::VitaResolveAt(from_dirfd, from);
+  const std::string resolved_to = fml::VitaResolveAt(to_dirfd, to);
+  if (resolved_from.empty() || resolved_to.empty()) {
+    errno = EBADF;
+    return -1;
+  }
+  return ::rename(resolved_from.c_str(), resolved_to.c_str());
+}
+
+}  // namespace
+
+#define FML_OPENAT VitaOpenAt
+#define FML_MKDIRAT VitaMkdirAt
+#define FML_UNLINKAT VitaUnlinkAt
+#define FML_ACCESSAT(d, p, m, f) VitaAccessAt(d, p, m)
+#define FML_RENAMEAT VitaRenameAt
+#else
+#define FML_OPENAT ::openat
+#define FML_MKDIRAT ::mkdirat
+#define FML_UNLINKAT ::unlinkat
+#define FML_ACCESSAT ::faccessat
+#define FML_RENAMEAT ::renameat
+#endif  // defined(FML_OS_VITA)
 
 namespace fml {
 
@@ -91,7 +183,7 @@ fml::UniqueFD OpenFile(const fml::UniqueFD& base_directory,
   }
 
   return fml::UniqueFD{
-      FML_HANDLE_EINTR(::openat(base_directory.get(), path, flags, mode))};
+      FML_HANDLE_EINTR(FML_OPENAT(base_directory.get(), path, flags, mode))};
 }
 
 fml::UniqueFD OpenDirectory(const char* path,
@@ -110,14 +202,14 @@ fml::UniqueFD OpenDirectory(const fml::UniqueFD& base_directory,
   }
 
   if (create_if_necessary && !FileExists(base_directory, path)) {
-    if (::mkdirat(base_directory.get(), path,
+    if (FML_MKDIRAT(base_directory.get(), path,
                   ToPosixCreateModeFlags(permission) | S_IXUSR) != 0) {
       return {};
     }
   }
 
   return fml::UniqueFD{FML_HANDLE_EINTR(
-      ::openat(base_directory.get(), path, O_RDONLY | O_DIRECTORY))};
+      FML_OPENAT(base_directory.get(), path, O_RDONLY | O_DIRECTORY))};
 }
 
 fml::UniqueFD Duplicate(fml::UniqueFD::element_type descriptor) {
@@ -128,6 +220,19 @@ bool IsDirectory(const fml::UniqueFD& directory) {
   if (!directory.is_valid()) {
     return false;
   }
+
+#if defined(FML_OS_VITA)
+  // A registry token *is* a directory -- it cannot be created for anything
+  // else, because VitaOpenDirFd only hands one out after sceIoDopen succeeds.
+  // fstat would fail on it, and DirectoryAssetBundle calls this to decide
+  // whether it is usable at all: with fstat's answer the bundle declared
+  // itself invalid and every asset lookup returned null before touching the
+  // filesystem. That is what kept FontManifest.json "missing" while it sat on
+  // the device at exactly the path being asked for.
+  if (IsVitaDirFd(directory.get())) {
+    return true;
+  }
+#endif
 
   struct stat stat_result = {};
 
@@ -165,7 +270,7 @@ bool UnlinkDirectory(const char* path) {
 }
 
 bool UnlinkDirectory(const fml::UniqueFD& base_directory, const char* path) {
-  return ::unlinkat(base_directory.get(), path, AT_REMOVEDIR) == 0;
+  return FML_UNLINKAT(base_directory.get(), path, AT_REMOVEDIR) == 0;
 }
 
 bool UnlinkFile(const char* path) {
@@ -173,7 +278,7 @@ bool UnlinkFile(const char* path) {
 }
 
 bool UnlinkFile(const fml::UniqueFD& base_directory, const char* path) {
-  int code = ::unlinkat(base_directory.get(), path, 0);
+  int code = FML_UNLINKAT(base_directory.get(), path, 0);
   if (code != 0) {
     FML_DLOG(ERROR) << strerror(errno);
   }
@@ -185,7 +290,7 @@ bool FileExists(const fml::UniqueFD& base_directory, const char* path) {
     return false;
   }
 
-  return ::faccessat(base_directory.get(), path, F_OK, 0) == 0;
+  return FML_ACCESSAT(base_directory.get(), path, F_OK, 0) == 0;
 }
 
 bool WriteAtomically(const fml::UniqueFD& base_directory,
@@ -229,7 +334,7 @@ bool WriteAtomically(const fml::UniqueFD& base_directory,
     return false;
   }
 
-  return ::renameat(base_directory.get(), temp_file_name.c_str(),
+  return FML_RENAMEAT(base_directory.get(), temp_file_name.c_str(),
                     base_directory.get(), file_name) == 0;
 }
 

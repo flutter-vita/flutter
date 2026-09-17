@@ -22,6 +22,8 @@
 #include "flutter/fml/platform/linux/message_loop_linux.h"
 #elif FML_OS_WIN
 #include "flutter/fml/platform/win/message_loop_win.h"
+#elif FML_OS_VITA
+#include "flutter/fml/platform/vita/message_loop_vita.h"
 #endif
 
 namespace fml {
@@ -37,6 +39,8 @@ fml::RefPtr<MessageLoopImpl> MessageLoopImpl::Create() {
   return fml::MakeRefCounted<MessageLoopLinux>();
 #elif FML_OS_WIN
   return fml::MakeRefCounted<MessageLoopWin>();
+#elif FML_OS_VITA
+  return fml::MakeRefCounted<MessageLoopVita>();
 #else
   return nullptr;
 #endif
