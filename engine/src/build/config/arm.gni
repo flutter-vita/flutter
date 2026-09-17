@@ -50,11 +50,25 @@ if (current_cpu == "arm" || current_cpu == "arm64") {
   } else if (arm_version == 7) {
     arm_arch = "armv7-a"
     if (arm_tune == "") {
-      arm_tune = "generic-armv7-a"
+      if (current_os == "vita") {
+        arm_tune = "cortex-a9"
+      } else {
+        arm_tune = "generic-armv7-a"
+      }
     }
 
     if (arm_float_abi == "") {
-      arm_float_abi = "softfp"
+      if (current_os == "vita") {
+        # VitaSDK's GCC is built --with-float=hard. Defaulting to softfp here
+        # would link the engine against hard-float VitaSDK libraries with no
+        # error from the linker -- doubles would silently arrive as garbage
+        # across every boundary. Measured in Phase 0.5 (spike B5): both sides
+        # carry e_flags 0x05000400. This must not depend on remembering a gn
+        # arg.
+        arm_float_abi = "hard"
+      } else {
+        arm_float_abi = "softfp"
+      }
     }
 
     arm_use_thumb = true

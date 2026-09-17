@@ -127,7 +127,17 @@ config("compiler") {
     }
 
     # Linker warnings.
-    if (!(is_chromeos && current_cpu == "arm") && !is_mac && !is_ios) {
+    # Not on Vita. VitaSDK's own crtn.o has no .note.GNU-stack section, so every
+    # link emits "missing .note.GNU-stack section implies executable stack" --
+    # a warning about a file this project does not build and cannot fix, which
+    # --fatal-warnings turns into a failed link.
+    #
+    # The warning is also not meaningful here: it exists to catch a
+    # writable-and-executable stack on systems that enforce NX per-page from the
+    # ELF header, and Vita homebrew is loaded by the kernel from a signed self
+    # with its own memory policy.
+    if (!(is_chromeos && current_cpu == "arm") && !is_mac && !is_ios &&
+        !is_vita) {
       # TODO(jochen): Enable this on chromeos on arm. http://crbug.com/356580
       ldflags += [ "-Wl,--fatal-warnings" ]
     }
@@ -294,6 +304,37 @@ config("compiler") {
     cflags += [
       "-faligned-allocation",
       "-fnew-alignment=$operator_new_alignment",
+    ]
+  }
+
+  # Vita CPU flags.
+  # ---------------
+  # These would normally come from the `is_posix` branch above, which owns the
+  # per-CPU `-march`/`-mfloat-abi` dispatch. Vita is deliberately not is_posix
+  # (see BUILDCONFIG.gn), so that branch is skipped and the flags have to be
+  # emitted here instead.
+  #
+  # It is tempting to leave this out, because arm-vita-eabi-gcc is a
+  # single-target toolchain whose defaults already are armv7-a hard-float. That
+  # is exactly why it would be dangerous: the build would appear to work while
+  # depending on a compiler default, and the first time anything is compiled by
+  # a different driver the ABI would diverge silently. Phase 0.5 spike B5 pinned
+  # e_flags 0x05000400 on both sides; keep it explicit.
+  if (is_vita) {
+    assert(current_cpu == "arm", "Vita is armv7 only")
+    cflags += [
+      "-march=$arm_arch",
+      "-mfloat-abi=$arm_float_abi",
+    ]
+    if (arm_tune != "") {
+      cflags += [ "-mtune=$arm_tune" ]
+    }
+    if (arm_use_thumb) {
+      cflags += [ "-mthumb" ]
+    }
+    ldflags += [
+      "-march=$arm_arch",
+      "-mfloat-abi=$arm_float_abi",
     ]
   }
 
@@ -483,14 +524,21 @@ config("compiler") {
 # C++ modules (available and enabled by default in C++20 and above) are
 # prohibited by the style guide.
 config("cxx_disable_modules") {
-  disable_modules_flags = [
-    "-fno-modules",
+  # All three of these are Clang spellings. GCC has never had modules enabled
+  # by default, so there is nothing to turn off, and it rejects the flags
+  # outright.
+  if (is_clang) {
+    disable_modules_flags = [
+      "-fno-modules",
 
-    # Some Clang versions do not disable ObjC modules (as tested by
-    # __has_feature(objc_modules)) when just -fno-modules is present.
-    "-Xclang",
-    "-fno-cxx-modules",
-  ]
+      # Some Clang versions do not disable ObjC modules (as tested by
+      # __has_feature(objc_modules)) when just -fno-modules is present.
+      "-Xclang",
+      "-fno-cxx-modules",
+    ]
+  } else {
+    disable_modules_flags = []
+  }
   cflags_c = disable_modules_flags
   cflags_cc = disable_modules_flags
   cflags_objc = disable_modules_flags
@@ -678,6 +726,22 @@ config("runtime_library") {
   if (is_fuchsia) {
     configs = [ "//flutter/tools/fuchsia/gn-sdk/src/config:runtime_library" ]
   }
+
+  # Vita standard library setup: VitaSDK's own newlib and libstdc++.
+  if (is_vita) {
+    # newlib gates its POSIX and BSD extensions behind feature-test macros, and
+    # -std=c++20 defines __STRICT_ANSI__, which hides them. The engine and Dart
+    # both assume glibc, where they are visible by default. Without this,
+    # functions like strdup and strtok_r come back "not declared in this scope"
+    # one file at a time, and patching each call site would be endless and
+    # wrong -- they do exist.
+    defines += [ "_DEFAULT_SOURCE" ]
+
+    # ICU picks its file-mapping implementation from U_HAVE_MMAP. There is no
+    # mmap on Vita, so force the stdio fallback; newlib's file IO is sceIo
+    # backed and reads icudtl.dat fine.
+    defines += [ "U_HAVE_MMAP=0" ]
+  }
 }
 
 # default_warning_flags collects all warning flags that are used by default.
@@ -740,7 +804,12 @@ if (is_win) {
     "-Wno-unused-parameter",  # Unused function parameters.
   ]
 
-  if (!is_qnx) {
+  # Not on Vita, for the same reason QNX opts out: the warning set upstream
+  # tunes against Clang and a handful of known GCCs, and VitaSDK's GCC 15.2 is
+  # neither. Turning every new-in-GCC-15 diagnostic into a build failure across
+  # Skia, ICU and HarfBuzz would bury the porting errors that actually matter.
+  # Revisit once the target links.
+  if (!is_qnx && !is_vita) {
     default_warning_flags += [
       "-Werror",  # Warnings as errors.
     ]

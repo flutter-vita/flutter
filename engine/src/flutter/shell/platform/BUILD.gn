@@ -24,6 +24,11 @@ group("platform") {
     deps = [ "fuchsia" ]
   } else if (is_qnx) {
     deps = []
+  } else if (is_vita) {
+    # No platform-specific shell here. The Vita port is an embedder-API client
+    # (//flutter/shell/platform/embedder), not a first-class desktop shell, so
+    # the sceGxm/sceDisplay/sceTouch code lives outside the engine tree.
+    deps = []
   } else {
     assert(false, "Unknown/Unsupported platform.")
   }
