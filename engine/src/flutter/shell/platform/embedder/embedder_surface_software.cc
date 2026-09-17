@@ -15,6 +15,20 @@
 
 namespace flutter {
 
+namespace {
+SoftwareFrameDamageObserver g_frame_damage_observer;
+SoftwareRasterTimingObserver g_raster_timing_observer;
+}  // namespace
+
+void SetSoftwareFrameDamageObserver(SoftwareFrameDamageObserver observer) {
+  g_frame_damage_observer = std::move(observer);
+}
+
+void SetSoftwareRasterTimingObserver(SoftwareRasterTimingObserver observer) {
+  g_raster_timing_observer = std::move(observer);
+}
+
+
 EmbedderSurfaceSoftware::EmbedderSurfaceSoftware(
     SoftwareDispatchTable software_dispatch_table,
     std::shared_ptr<EmbedderExternalViewEmbedder> external_view_embedder)
@@ -80,6 +94,42 @@ sk_sp<SkSurface> EmbedderSurfaceSoftware::AcquireBackingStore(
   }
 
   return sk_surface_;
+}
+
+// |GPUSurfaceSoftwareDelegate|
+bool EmbedderSurfaceSoftware::BackingStoreRetainsPreviousFrame() const {
+  // `sk_surface_` above is allocated once and handed out unchanged for every
+  // frame at the same size; nothing here ever swaps, recycles or clears it, and
+  // presenting only *reads* it through peekPixels. So the pixels the embedder
+  // saw last frame are still there when the next frame starts, which is exactly
+  // the promise partial repaint needs.
+  //
+  // Upstream leaves this off because the GL and Metal embedders cannot make the
+  // promise -- they present by swapping buffers, so what comes back is two
+  // frames old. The software path never had that problem and simply never
+  // claimed the capability.
+  return true;
+}
+
+// |GPUSurfaceSoftwareDelegate|
+void EmbedderSurfaceSoftware::OnFrameDamage(
+    const std::optional<DlIRect>& damage) {
+  if (!g_frame_damage_observer) {
+    return;
+  }
+  if (!damage.has_value()) {
+    g_frame_damage_observer(0, 0, 0, 0, true);
+    return;
+  }
+  g_frame_damage_observer(damage->GetLeft(), damage->GetTop(),
+                          damage->GetRight(), damage->GetBottom(), false);
+}
+
+// |GPUSurfaceSoftwareDelegate|
+void EmbedderSurfaceSoftware::OnRasterTiming(uint64_t raster_us) {
+  if (g_raster_timing_observer) {
+    g_raster_timing_observer(raster_us);
+  }
 }
 
 // |GPUSurfaceSoftwareDelegate|
