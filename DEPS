@@ -846,6 +846,14 @@ recursedeps = [
 
 hooks = [
   {
+    # The Vita port's changes to the Dart SDK, zlib, Skia, abseil and
+    # BoringSSL, which are not files of this repository. Idempotent; see
+    # engine/src/flutter/tools/vita/README.md.
+    'name': 'vita_patches',
+    'pattern': '.',
+    'action': ['python3', 'engine/src/flutter/tools/vita/apply_patches.py'],
+  },
+  {
     # Generate the Dart SDK's .dart_tool/package_confg.json file.
     'name': 'Generate .dart_tool/package_confg.json',
     'pattern': '.',

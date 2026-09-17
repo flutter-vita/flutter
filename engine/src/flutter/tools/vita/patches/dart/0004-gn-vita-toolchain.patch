@@ -1,0 +1,111 @@
+diff --git a/runtime/BUILD.gn b/runtime/BUILD.gn
+index 8cd05ff4..1b77a930 100644
+--- a/runtime/BUILD.gn
++++ b/runtime/BUILD.gn
+@@ -143,6 +143,8 @@ config("dart_os_config") {
+     defines += [ "DART_TARGET_OS_LINUX" ]
+   } else if (target_os == "mac") {
+     defines += [ "DART_TARGET_OS_MACOS" ]
++  } else if (target_os == "vita") {
++    defines += [ "DART_TARGET_OS_VITA" ]
+   } else if (target_os == "win") {
+     defines += [ "DART_TARGET_OS_WINDOWS" ]
+   } else if (target_os == "winuwp") {
+@@ -181,6 +183,13 @@ config("dart_linux_arm_config") {
+   ]
+ }
+ 
++config("dart_vita_arm_config") {
++  defines = [
++    "DART_TARGET_OS_VITA",
++    "TARGET_ARCH_ARM",
++  ]
++}
++
+ config("dart_linux_riscv64_config") {
+   defines = [
+     "DART_TARGET_OS_LINUX",
+diff --git a/runtime/configs.gni b/runtime/configs.gni
+index 6233cf8d..a7db53c8 100644
+--- a/runtime/configs.gni
++++ b/runtime/configs.gni
+@@ -69,6 +69,12 @@ _precompiler_product_linux_arm_config =
+       "$_dart_runtime:dart_linux_arm_config",
+     ] + _product + _precompiler_base
+ 
++_precompiler_product_vita_arm_config =
++    [
++      "$_dart_runtime:dart_config",
++      "$_dart_runtime:dart_vita_arm_config",
++    ] + _product + _precompiler_base
++
+ _precompiler_product_linux_riscv64_config =
+     [
+       "$_dart_runtime:dart_config",
+@@ -167,6 +173,13 @@ _all_configs = [
+     compiler = true
+     is_product = true
+   },
++  {
++    suffix = "_precompiler_product_vita_arm"
++    configs = _precompiler_product_vita_arm_config
++    snapshot = false
++    compiler = true
++    is_product = true
++  },
+   {
+     suffix = "_precompiler_product_linux_riscv64"
+     configs = _precompiler_product_linux_riscv64_config
+diff --git a/runtime/vm/vm_sources.gni b/runtime/vm/vm_sources.gni
+index 2241123e..0945c001 100644
+--- a/runtime/vm/vm_sources.gni
++++ b/runtime/vm/vm_sources.gni
+@@ -72,6 +72,7 @@ vm_sources = [
+   "cpuinfo_fuchsia.cc",
+   "cpuinfo_linux.cc",
+   "cpuinfo_macos.cc",
++  "cpuinfo_vita.cc",
+   "cpuinfo_win.cc",
+   "dart.cc",
+   "dart.h",
+@@ -193,6 +194,7 @@ vm_sources = [
+   "native_message_handler.h",
+   "native_symbol.h",
+   "native_symbol_posix.cc",
++  "native_symbol_vita.cc",
+   "native_symbol_win.cc",
+   "object.cc",
+   "object.h",
+@@ -213,6 +215,7 @@ vm_sources = [
+   "os_fuchsia.cc",
+   "os_linux.cc",
+   "os_macos.cc",
++  "os_vita.cc",
+   "os_thread.cc",
+   "os_thread.h",
+   "os_thread_absl.cc",
+@@ -225,6 +228,8 @@ vm_sources = [
+   "os_thread_linux.h",
+   "os_thread_macos.cc",
+   "os_thread_macos.h",
++  "os_thread_vita.cc",
++  "os_thread_vita.h",
+   "os_thread_win.cc",
+   "os_thread_win.h",
+   "os_win.cc",
+@@ -330,6 +335,7 @@ vm_sources = [
+   "thread_interrupter_fuchsia.cc",
+   "thread_interrupter_linux.cc",
+   "thread_interrupter_macos.cc",
++  "thread_interrupter_vita.cc",
+   "thread_interrupter_win.cc",
+   "thread_pool.cc",
+   "thread_pool.h",
+@@ -368,6 +374,7 @@ vm_sources = [
+   "virtual_memory_compressed.h",
+   "virtual_memory_fuchsia.cc",
+   "virtual_memory_posix.cc",
++  "virtual_memory_vita.cc",
+   "virtual_memory_win.cc",
+   "visitor.cc",
+   "visitor.h",
