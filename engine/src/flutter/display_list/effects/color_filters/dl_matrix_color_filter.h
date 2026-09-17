@@ -7,6 +7,10 @@
 
 #include "flutter/display_list/effects/dl_color_filter.h"
 
+// memcpy/memset/memcmp. libc++ and glibc pull <cstring> in transitively;
+// newlib's libstdc++ does not, so this is only visible on the Vita build.
+#include <cstring>
+
 namespace flutter {
 
 // The Matrix type of ColorFilter which runs every pixel drawn by

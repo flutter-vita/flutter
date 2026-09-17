@@ -4,6 +4,10 @@
 
 #include "flutter/display_list/geometry/dl_region.h"
 
+// memcpy/memset/memcmp. libc++ and glibc pull <cstring> in transitively;
+// newlib's libstdc++ does not, so this is only visible on the Vita build.
+#include <cstring>
+
 #include "flutter/fml/logging.h"
 
 namespace flutter {

@@ -46,6 +46,10 @@
 #define OS_SOLARIS 1
 #elif defined(__QNXNTO__)
 #define OS_QNX 1
+#elif defined(__vita__)
+// PlayStation Vita (VitaSDK, newlib). Its GCC defines neither __linux__ nor
+// __unix__, so without this the chain reaches the #error below.
+#define OS_VITA 1
 #else
 #error Please add support for your platform in tonic/common/build_config.h
 #endif
@@ -58,9 +62,12 @@
 
 // For access to standard POSIXish features, use OS_POSIX instead of a
 // more specific macro.
+// OS_VITA is here for the same reason FML_OS_VITA is in fml's equivalent: what
+// this gates is open/read/close and pthreads, all of which newlib supplies. It
+// is not a claim that the platform is POSIX.
 #if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_FREEBSD) ||    \
     defined(OS_OPENBSD) || defined(OS_SOLARIS) || defined(OS_ANDROID) || \
-    defined(OS_NACL) || defined(OS_QNX)
+    defined(OS_NACL) || defined(OS_QNX) || defined(OS_VITA)
 #define OS_POSIX 1
 #endif
 
