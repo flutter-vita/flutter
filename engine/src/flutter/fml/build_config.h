@@ -52,6 +52,11 @@
 #define FML_OS_QNX 1
 #elif defined(__EMSCRIPTEN__)
 #define FML_OS_EMSCRIPTEN
+#elif defined(__vita__)
+// PlayStation Vita (VitaSDK, newlib). Note this must come after the __linux__
+// arm above rather than being folded into it: VitaSDK's GCC defines neither
+// __linux__ nor __unix__, only __vita__.
+#define FML_OS_VITA 1
 #else
 #error Please add support for your platform in flutter/fml/build_config.h
 #endif
@@ -64,10 +69,16 @@
 
 // For access to standard POSIXish features, use FML_OS_POSIX instead of a
 // more specific macro.
+// The Vita is in this list for the same reason its sources come from
+// fml/platform/posix: newlib gives it open/read/close, pthreads and
+// pthread_once, which is all FML_OS_POSIX gates. It is emphatically not a claim
+// that the platform is POSIX -- there is no mmap, no dlopen and no fork, and
+// each of those is handled where it is used.
 #if defined(FML_OS_MACOSX) || defined(FML_OS_LINUX) ||    \
     defined(FML_OS_FREEBSD) || defined(FML_OS_OPENBSD) || \
     defined(FML_OS_SOLARIS) || defined(FML_OS_ANDROID) || \
-    defined(FML_OS_NACL) || defined(FML_OS_QNX)
+    defined(FML_OS_NACL) || defined(FML_OS_QNX) ||        \
+    defined(FML_OS_VITA)
 #define FML_OS_POSIX 1
 #endif
 

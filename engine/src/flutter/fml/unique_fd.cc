@@ -6,6 +6,10 @@
 
 #include "flutter/fml/eintr_wrapper.h"
 
+#if defined(FML_OS_VITA)
+#include "flutter/fml/platform/vita/dir_fd_vita.h"
+#endif
+
 namespace fml {
 namespace internal {
 
@@ -27,6 +31,16 @@ void UniqueFDTraits::Free_Handle(HANDLE fd) {
 namespace os_unix {
 
 void UniqueFDTraits::Free(int fd) {
+#if defined(FML_OS_VITA)
+  // Directory descriptors on this platform are registry tokens rather than
+  // anything the C library knows about, and this is the one place every one of
+  // them passes through on the way out -- so it is where the slot is released.
+  // Handing a token to close() would just return EBADF and leak the entry.
+  if (IsVitaDirFd(fd)) {
+    VitaCloseDirFd(fd);
+    return;
+  }
+#endif
   close(fd);
 }
 

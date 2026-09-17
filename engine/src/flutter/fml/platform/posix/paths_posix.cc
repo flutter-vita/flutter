@@ -8,6 +8,13 @@
 
 #include <climits>
 
+#if defined(__vita__)
+// newlib keeps PATH_MAX in <sys/syslimits.h>. VitaSDK does ship a <limits.h>
+// that defines it, but GCC's own limits.h shadows it and the include_next chain
+// never reaches it, so <climits> alone leaves PATH_MAX undefined here.
+#include <sys/syslimits.h>
+#endif
+
 #include "flutter/fml/logging.h"
 
 namespace fml {

@@ -202,6 +202,16 @@ source_set("fml") {
     sources += [ "platform/qnx/paths_qnx.cc" ]
   }
 
+  if (is_vita) {
+    sources += [
+      "platform/vita/dir_fd_vita.cc",
+      "platform/vita/dir_fd_vita.h",
+      "platform/vita/message_loop_vita.cc",
+      "platform/vita/message_loop_vita.h",
+      "platform/vita/paths_vita.cc",
+    ]
+  }
+
   if (is_fuchsia) {
     sources += [
       "platform/fuchsia/message_loop_fuchsia.cc",
