@@ -6,6 +6,16 @@
 
 #include "flutter/display_list/image/dl_image_skia.h"
 #include "flutter/fml/logging.h"
+
+// GL without Impeller is a configuration upstream does not build, and this is
+// where it shows. BUILD.gn already gates the //flutter/impeller/renderer/
+// backend/gles dependency on impeller_supports_rendering, but these includes
+// are unconditional -- so with shell_enable_gl=true and
+// impeller_supports_rendering=false the file asks for GLES3/gl3.h with no
+// include path to find it on, and the Vita has GLES2 headers only.
+//
+// Guarding them matches the gate BUILD.gn already applies one level up.
+#ifdef IMPELLER_SUPPORTS_RENDERING
 #include "impeller/core/texture_descriptor.h"
 #include "impeller/display_list/aiks_context.h"
 #include "impeller/display_list/dl_image_impeller.h"
@@ -13,6 +23,7 @@
 #include "impeller/renderer/backend/gles/context_gles.h"
 #include "impeller/renderer/backend/gles/handle_gles.h"
 #include "impeller/renderer/backend/gles/texture_gles.h"
+#endif  // IMPELLER_SUPPORTS_RENDERING
 
 #include "third_party/skia/include/core/SkAlphaType.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
@@ -69,9 +80,12 @@ sk_sp<DlImage> EmbedderExternalTextureGL::ResolveTexture(
     GrDirectContext* context,
     impeller::AiksContext* aiks_context,
     const SkISize& size) {
+#ifdef IMPELLER_SUPPORTS_RENDERING
   if (!!aiks_context) {
     return ResolveTextureImpeller(texture_id, aiks_context, size);
-  } else if (context) {
+  }
+#endif  // IMPELLER_SUPPORTS_RENDERING
+  if (context) {
     return ResolveTextureSkia(texture_id, context, size);
   }
   return nullptr;
@@ -132,6 +146,7 @@ sk_sp<DlImage> EmbedderExternalTextureGL::ResolveTextureSkia(
   return DlImageSkia::Make(std::move(image));
 }
 
+#ifdef IMPELLER_SUPPORTS_RENDERING
 sk_sp<DlImage> EmbedderExternalTextureGL::ResolveTextureImpeller(
     int64_t texture_id,
     impeller::AiksContext* aiks_context,
@@ -192,6 +207,7 @@ sk_sp<DlImage> EmbedderExternalTextureGL::ResolveTextureImpeller(
 
   return impeller::DlImageImpeller::Make(image);
 }
+#endif  // IMPELLER_SUPPORTS_RENDERING
 
 // |flutter::Texture|
 void EmbedderExternalTextureGL::OnGrContextCreated() {}
