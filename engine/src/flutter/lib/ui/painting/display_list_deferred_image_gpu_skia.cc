@@ -220,7 +220,21 @@ void DlDeferredImageGPUSkia::ImageWrapper::Unregister() {
 
 void DlDeferredImageGPUSkia::ImageWrapper::DeleteTexture() {
   if (texture_.isValid()) {
-    unref_queue_->DeleteTexture(texture_);
+    // Vita port. The unref queue deletes a backend texture only through the
+    // IO manager's resource context, and this embedder gives it none (one GL
+    // context on the console; vita_embedder.cc leaves make_resource_current
+    // null). Queued there, the texture was dropped and the GL object stayed
+    // alive: one 960x544 render target per page snapshot, never freed. On
+    // fvita_gles2 that ran CDRAM down to nothing in the gallery's route
+    // scenes (2026-09-12); on vitaGL it was the native-heap growth of
+    // docs/results/the-second-route-scene-2026-09-01.md. Both callers run on
+    // the raster thread, and context_ is the raster context that made the
+    // texture, so it can delete it here.
+    if (context_) {
+      context_->deleteBackendTexture(texture_);
+    } else {
+      unref_queue_->DeleteTexture(texture_);
+    }
     texture_ = GrBackendTexture();
   }
   image_.reset();
