@@ -5,6 +5,7 @@
 #ifndef FLUTTER_FLOW_SKIA_GPU_OBJECT_H_
 #define FLUTTER_FLOW_SKIA_GPU_OBJECT_H_
 
+#include <atomic>
 #include <mutex>
 #include <queue>
 
@@ -20,6 +21,22 @@
 
 namespace flutter {
 
+// Vita port instrumentation. How many Skia objects are waiting to be freed, and
+// how many have actually been freed.
+//
+// ui.Image.dispose() does not free anything by itself -- it hands the SkImage
+// to this queue, which frees it later on the IO task runner, from a *delayed*
+// task. A queue that never drains is indistinguishable from a leak from
+// anywhere else in the process, and on 2026-09-01 something was growing the
+// native heap 4-6 MB per page transition while Skia's resource cache, Flutter's
+// RasterCache and the glyph cache all stayed flat. Those three could be
+// measured; this one could not.
+//
+// Delayed tasks are a fair thing to suspect here: until 2026-08-25 every timer
+// on this port fired on a 200 ms grid.
+inline std::atomic<int64_t> g_vita_unref_queued{0};
+inline std::atomic<int64_t> g_vita_unref_drained{0};
+
 // A queue that holds Skia objects that must be destructed on the given task
 // runner.
 template <class T>
@@ -34,6 +51,7 @@ class UnrefQueue : public fml::RefCountedThreadSafe<UnrefQueue<T>> {
     }
     std::scoped_lock lock(mutex_);
     objects_.push_back(object);
+    g_vita_unref_queued.fetch_add(1, std::memory_order_relaxed);
     if (!drain_pending_) {
       drain_pending_ = true;
       task_runner_->PostDelayedTask(
@@ -72,6 +90,8 @@ class UnrefQueue : public fml::RefCountedThreadSafe<UnrefQueue<T>> {
       NOT_SLIMPELLER(textures_.swap(textures));
       drain_pending_ = false;
     }
+    g_vita_unref_drained.fetch_add(static_cast<int64_t>(skia_objects.size()),
+                                   std::memory_order_relaxed);
     DoDrain(skia_objects,
 #if !SLIMPELLER
             textures,

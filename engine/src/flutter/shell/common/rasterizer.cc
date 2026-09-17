@@ -13,6 +13,8 @@
 #include "flutter/common/constants.h"
 #include "flutter/common/graphics/persistent_cache.h"
 #include "flutter/flow/layers/offscreen_surface.h"
+#include "flutter/flow/raster_cache.h"
+#include "flutter/flow/skia_gpu_object.h"
 #include "flutter/fml/time/time_delta.h"
 #include "flutter/fml/time/time_point.h"
 #include "flutter/shell/common/base64.h"
@@ -23,6 +25,7 @@
 #include "impeller/renderer/context.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkData.h"
+#include "third_party/skia/include/core/SkGraphics.h"
 #include "third_party/skia/include/core/SkImage.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 #include "third_party/skia/include/core/SkMatrix.h"
@@ -303,6 +306,73 @@ DrawStatus Rasterizer::Draw(const std::shared_ptr<FramePipeline>& pipeline) {
     default:
       break;
   }
+
+#if !SLIMPELLER
+  // Where the memory goes, once a frame in sixty.
+  //
+  // ZoomPageTransitionsBuilder -- Material's default for TargetPlatform.linux,
+  // which is what the Vita port reports -- grows the native heap 4-6 MB per
+  // push-and-pop cycle from the tenth cycle onward and never gives it back
+  // (docs/results/page-transitions-2026-09-01.md). Two candidates were
+  // eliminated by reading: the framework disposes its snapshot on every path,
+  // and the shell caps Skia's resource cache at width*height*12*4, which the
+  // growth passes. Neither of those readings is a measurement, and there was no
+  // way to take one -- nothing in this process reports what either cache holds.
+  //
+  // So it reports both, side by side with the embedder's mallinfo line, which
+  // is the only other memory number this port has.
+  {
+    static uint32_t draws = 0;
+    if (++draws % 60 == 0) {
+      size_t gr_count = 0;
+      size_t gr_bytes = 0;
+      size_t gr_limit = 0;
+      if (surface_) {
+        GrDirectContext* context = surface_->GetContext();
+        if (context) {
+          int count = 0;
+          context->getResourceCacheUsage(&count, &gr_bytes);
+          gr_count = static_cast<size_t>(count);
+          gr_limit = context->getResourceCacheLimit();
+        }
+      }
+      const RasterCache& rc = compositor_context_->raster_cache();
+      // The glyph cache is third because it was third to be suspected, and
+      // then first to look guilty: both times this port wedged under memory
+      // pressure it wedged inside FreeType -- once on the UI thread in
+      // FT_GlyphLoader_CheckPoints, once on the raster thread in
+      // gray_render_line. Neither of the two caches above holds the memory
+      // that grows, and SkStrikeCache is CPU-side malloc that neither of them
+      // accounts for.
+      FML_LOG(ERROR) << "vita-cache draw " << draws                //
+                     << " gr=" << gr_count << "/" << (gr_bytes >> 10)
+                     << "K limit=" << (gr_limit >> 10) << "K"      //
+                     << " rc_layer=" << rc.GetLayerCachedEntriesCount()
+                     << "/" << (rc.EstimateLayerCacheByteSize() >> 10) << "K"
+                     << " rc_pic=" << rc.GetPictureCachedEntriesCount()
+                     << "/" << (rc.EstimatePictureCacheByteSize() >> 10) << "K"
+                     << " glyph=" << SkGraphics::GetFontCacheCountUsed()
+                     << "/" << SkGraphics::GetFontCacheCountLimit()
+                     << " " << (SkGraphics::GetFontCacheUsed() >> 10)
+                     << "K/" << (SkGraphics::GetFontCacheLimit() >> 10) << "K"
+                     << " unref q="
+                     << g_vita_unref_queued.load(std::memory_order_relaxed)
+                     << " d="
+                     << g_vita_unref_drained.load(std::memory_order_relaxed)
+                     // The *other* resource cache. GrDirectContext's holds GPU
+                     // resources; this one is CPU-side and holds mipmaps,
+                     // scaled bitmaps and filter results. Missing it cost a
+                     // round of "eliminated everything, found nothing" -- and
+                     // a transition that scales a rasterised snapshot every
+                     // frame is precisely what fills it.
+                     << " skres="
+                     << (SkGraphics::GetResourceCacheTotalBytesUsed() >> 10)
+                     << "K/"
+                     << (SkGraphics::GetResourceCacheTotalByteLimit() >> 10)
+                     << "K";
+    }
+  }
+#endif  // !SLIMPELLER
 
   return ToDrawStatus(draw_result.status);
 }
