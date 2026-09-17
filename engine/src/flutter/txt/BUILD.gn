@@ -110,6 +110,10 @@ source_set("txt") {
     deps += [ "${fuchsia_sdk}/fidl/fuchsia.fonts" ]
   } else if (is_win) {
     sources += [ "src/txt/platform_windows.cc" ]
+  } else if (is_vita) {
+    # Not the generic platform.cc below: that returns an *empty* font manager
+    # and "Arial" as the default family, so nothing resolves and no text draws.
+    sources += [ "src/txt/platform_vita.cc" ]
   } else {
     sources += [ "src/txt/platform.cc" ]
   }

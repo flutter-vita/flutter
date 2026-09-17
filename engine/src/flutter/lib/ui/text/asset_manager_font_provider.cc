@@ -109,6 +109,12 @@ auto AssetManagerFontStyleSet::createTypeface(int i) -> CreateTypefaceRet {
     std::unique_ptr<fml::Mapping> asset_mapping =
         asset_manager_->GetAsMapping(asset.asset);
     if (asset_mapping == nullptr) {
+      // Temporary probe, remove with the rest of the vita font bring-up.
+      // FML_DLOG compiles away in release and this port only builds release,
+      // so both of this function's failure paths were silent -- an icon font
+      // that never registered looked identical to one that rendered tofu.
+      FML_LOG(ERROR) << "vita-probe: no mapping for font asset " << asset.asset
+                     << " family=" << family_name_;
       return nullptr;
     }
 
@@ -122,8 +128,9 @@ auto AssetManagerFontStyleSet::createTypeface(int i) -> CreateTypefaceRet {
     // Ownership of the stream is transferred.
     asset.typeface = font_mgr->makeFromStream(std::move(stream));
     if (!asset.typeface) {
-      FML_DLOG(ERROR) << "Unable to load font asset for family: "
-                      << family_name_;
+      FML_LOG(ERROR) << "vita-probe: makeFromStream failed for " << asset.asset
+                     << " family=" << family_name_ << " bytes="
+                     << asset_mapping_ptr->GetSize();
       return nullptr;
     }
   }

@@ -74,7 +74,7 @@ void FontCollection::RegisterFonts(
   std::unique_ptr<fml::Mapping> manifest_mapping =
       asset_manager->GetAsMapping("FontManifest.json");
   if (manifest_mapping == nullptr) {
-    FML_DLOG(WARNING) << "Could not find the font manifest in the asset store.";
+    FML_LOG(ERROR) << "vita-probe: no FontManifest.json in the asset store";
     return;
   }
 

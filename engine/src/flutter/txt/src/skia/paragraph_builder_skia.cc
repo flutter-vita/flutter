@@ -146,6 +146,26 @@ skt::ParagraphStyle ParagraphBuilderSkia::TxtToSkia(const ParagraphStyle& txt) {
 skt::TextStyle ParagraphBuilderSkia::TxtToSkia(const TextStyle& txt) {
   skt::TextStyle skia;
 
+#if defined(__vita__)
+  // No hinting on this port, and it is not a quality trade.
+  //
+  // skparagraph defaults fHinting to kSlight and nothing in Flutter overrides
+  // it. Slight still runs FreeType's *autohinter* for any font with no
+  // bytecode program, and the emoji font this port ships -- Noto Emoji, see
+  // assets/fonts/README.md -- has no `fpgm`, `prep` or `cvt `, so every emoji
+  // glyph was being autohinted on a 444 MHz CPU.
+  //
+  // Measured on 2026-08-29: with autohinting on, keklist's emoji grid took a
+  // data abort inside af_glyph_hints_reload -- a null dereference in the
+  // autohinter itself -- and emoji paragraphs cost about 1000 us each warm
+  // against 467 us for ordinary text.
+  //
+  // Hinting is a small-size legibility trick for LCD text, and it buys least
+  // on a 220 ppi panel drawn at a 0.5 pixel ratio. Turning it off costs
+  // nothing visible here and takes the autohinter out of the frame entirely.
+  skia.setFontHinting(SkFontHinting::kNone);
+#endif
+
   skia.setColor(txt.color);
   skia.setDecoration(static_cast<skt::TextDecoration>(txt.decoration));
   skia.setDecorationColor(txt.decoration_color);
