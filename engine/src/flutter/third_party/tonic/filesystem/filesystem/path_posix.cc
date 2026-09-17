@@ -9,6 +9,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#if defined(__vita__)
+// PATH_MAX. VitaSDK ships a <limits.h> that defines it, but GCC's own limits.h
+// shadows that one and the include_next chain never reaches it, so <climits>
+// below leaves PATH_MAX undefined. Same story as fml/platform/posix.
+#include <sys/syslimits.h>
+#endif
+
 #include <cerrno>
 #include <climits>
 #include <cstdlib>

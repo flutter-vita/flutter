@@ -4,6 +4,10 @@
 
 #include "flutter/display_list/dl_vertices.h"
 
+// memcpy/memset/memcmp. libc++ and glibc pull <cstring> in transitively;
+// newlib's libstdc++ does not, so this is only visible on the Vita build.
+#include <cstring>
+
 #include "flutter/display_list/utils/dl_accumulation_rect.h"
 #include "flutter/fml/logging.h"
 

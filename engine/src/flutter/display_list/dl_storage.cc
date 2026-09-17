@@ -4,6 +4,10 @@
 
 #include "flutter/display_list/dl_storage.h"
 
+// memcpy/memset/memcmp. libc++ and glibc pull <cstring> in transitively;
+// newlib's libstdc++ does not, so this is only visible on the Vita build.
+#include <cstring>
+
 namespace flutter {
 
 static constexpr inline bool is_power_of_two(int value) {

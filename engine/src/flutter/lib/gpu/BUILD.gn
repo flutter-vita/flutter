@@ -7,15 +7,22 @@ import("//flutter/impeller/tools/impeller.gni")
 import("//flutter/testing/testing.gni")
 
 source_set("gpu") {
-  cflags = [
-    # Dart gives us doubles. Skia and Impeller work in floats.
-    # If Dart gives us a double > FLT_MAX or < -FLT_MAX, implicit conversion
-    # will convert it to either inf/-inf or FLT_MAX/-FLT_MAX (undefined
-    # behavior). This can result in surprising and difficult to debug behavior
-    # for Flutter application developers, so it should be explicitly handled
-    # via SafeNarrow.
-    "-Wimplicit-float-conversion",
-  ]
+  cflags = []
+
+  # Dart gives us doubles. Skia and Impeller work in floats. If Dart gives us a
+  # double > FLT_MAX or < -FLT_MAX, implicit conversion will convert it to
+  # either inf/-inf or FLT_MAX/-FLT_MAX (undefined behavior). This can result in
+  # surprising and difficult to debug behavior for Flutter application
+  # developers, so it should be explicitly handled via SafeNarrow.
+  #
+  # GCC has no -Wimplicit-float-conversion and rejects it outright. Its nearest
+  # relative, -Wfloat-conversion, is much broader and would bury the porting
+  # work under warnings from headers this port does not own. The diagnostic is a
+  # developer aid for the dart:ui boundary rather than a correctness gate, and
+  # upstream builds this with Clang.
+  if (is_clang) {
+    cflags += [ "-Wimplicit-float-conversion" ]
+  }
 
   if (is_win) {
     # This causes build failures in third_party dependencies on Windows.

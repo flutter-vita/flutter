@@ -37,6 +37,14 @@ namespace flutter {
 #define kTargetOperatingSystemName "macos"
 #elif defined(FML_OS_WIN)
 #define kTargetOperatingSystemName "windows"
+#elif defined(FML_OS_VITA)
+// This string is a key into the native-assets manifest that `dart build`
+// writes, so it has to match whatever the tooling emits for this target. There
+// is no upstream Dart target triple for the Vita, and this port does not
+// support native assets at all yet -- nothing produces a "vita_arm" entry, so
+// the lookup simply never matches. Naming it here is what lets the file
+// compile; making native assets work is a separate piece of work.
+#define kTargetOperatingSystemName "vita"
 #else
 #error Target operating system detection failed.
 #endif
