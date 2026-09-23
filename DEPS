@@ -293,8 +293,11 @@ deps = {
   'engine/src/flutter/third_party/boringssl/src':
   Var('vita_git') + '/boringssl.git' + '@' + 'bcc66c794bcdfa481467264a4787327045603308',
 
+  # flutter-vita/dart-sdk: upstream dart_revision plus eleven commits with the
+  # Vita OS layer for the VM (platform dispatch, runtime/bin, emulated TLS,
+  # dart:vita, the TLS record layer on the calling isolate).
   'engine/src/flutter/third_party/dart':
-   Var('dart_git') + '/sdk.git' + '@' + Var('dart_revision'),
+   Var('vita_git') + '/dart-sdk.git' + '@' + 'fa1dacc4e82877e3a4d4c3d82cf6c36f3b9cd82b',
 
   # WARNING: Unused Dart dependencies in the list below till "WARNING:" marker are removed automatically - see create_updated_flutter_deps.py.
 
@@ -861,14 +864,6 @@ recursedeps = [
 ]
 
 hooks = [
-  {
-    # The Vita port's changes to the Dart SDK, zlib, Skia, abseil and
-    # BoringSSL, which are not files of this repository. Idempotent; see
-    # engine/src/flutter/tools/vita/README.md.
-    'name': 'vita_patches',
-    'pattern': '.',
-    'action': ['python3', 'engine/src/flutter/tools/vita/apply_patches.py'],
-  },
   {
     # Generate the Dart SDK's .dart_tool/package_confg.json file.
     'name': 'Generate .dart_tool/package_confg.json',
