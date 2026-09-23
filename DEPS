@@ -291,13 +291,13 @@ deps = {
   # flutter-vita/boringssl: upstream b0ae229f686f2be70689584d1e1c6a727a2cdfab
   # (dart_boringssl_rev) plus "vita: an entropy source on the console's kernel RNG".
   'engine/src/flutter/third_party/boringssl/src':
-  Var('vita_git') + '/boringssl.git' + '@' + 'bcc66c794bcdfa481467264a4787327045603308',
+  Var('vita_git') + '/boringssl.git' + '@' + 'df042ff4e3416b70007f6015c1f0e023227ae364',
 
   # flutter-vita/dart-sdk: upstream dart_revision plus eleven commits with the
   # Vita OS layer for the VM (platform dispatch, runtime/bin, emulated TLS,
   # dart:vita, the TLS record layer on the calling isolate).
   'engine/src/flutter/third_party/dart':
-   Var('vita_git') + '/dart-sdk.git' + '@' + 'fa1dacc4e82877e3a4d4c3d82cf6c36f3b9cd82b',
+   Var('vita_git') + '/dart-sdk.git' + '@' + '0de59006ba46a57bf4cba40ceb7d25c48a36ca18',
 
   # WARNING: Unused Dart dependencies in the list below till "WARNING:" marker are removed automatically - see create_updated_flutter_deps.py.
 
@@ -491,7 +491,7 @@ deps = {
   # flutter-vita/skia: upstream skia_revision plus "vita: platform detection,
   # and a file reader in place of mmap".
   'engine/src/flutter/third_party/skia':
-   Var('vita_git') + '/skia.git' + '@' + 'ddc7429a3cadfb5bdaaf1d84fe3341d931578e0b',
+   Var('vita_git') + '/skia.git' + '@' + '11a1a32f3539868b421bdb4eb224a66a9ace5aca',
 
   'engine/src/flutter/third_party/ocmock':
    Var('flutter_git') + '/third_party/ocmock' + '@' +  Var('ocmock_rev'),
@@ -540,7 +540,7 @@ deps = {
   # flutter-vita/abseil-cpp: chromium's 564023aa53767b5f60b3a556f0a025b7b7e8241e
   # plus "vita: no ELF introspection, no tm_gmtoff, memalign in place of mmap".
   'engine/src/third_party/abseil-cpp':
-  Var('vita_git') + '/abseil-cpp.git' + '@' + '277825cb1c77558a14c1565fe7654b8d1712e116',
+  Var('vita_git') + '/abseil-cpp.git' + '@' + '80fa3ea47abc9e6b36b11208a7e733ef5db899b3',
 
    # Dart packages
   'engine/src/flutter/third_party/pkg/archive':
