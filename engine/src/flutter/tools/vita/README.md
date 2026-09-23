@@ -2,7 +2,7 @@
 
 This branch, `vita-3.44.8`, is Flutter 3.44.8 (`058e0af2`) plus the
 PlayStation Vita port. The engine's own changes are the commits above the
-tag. Five dependencies change too, and they are not files of this
+tag. Four dependencies change too, and they are not files of this
 repository: `DEPS` names their revisions and `gclient sync` checks them
 out. Their changes live here as patch files and go in through the
 `vita_patches` hook in `DEPS`, which runs `apply_patches.py` after every
@@ -13,7 +13,6 @@ sync.
 | `patches/dart/` | `engine/src/flutter/third_party/dart` | A Vita OS layer for the Dart VM: the platform dispatch, `runtime/bin` (sockets, files, the event handler), emulated TLS, the `vm:entry-point` hooks an embedder needs, the SSL filter on the isolate |
 | `patches/zlib/` | `engine/src/flutter/third_party/zlib` | No ARMv8 paths on this ARMv7 |
 | `patches/skia/` | `engine/src/flutter/third_party/skia` | Platform detection, and no `mmap` |
-| `patches/abseil/` | `engine/src/third_party/abseil-cpp` | No ELF introspection, no `tm_gmtoff` |
 | `patches/boringssl/` | `engine/src/flutter/third_party/boringssl/src` | An entropy backend on the console's RNG |
 
 `apply_patches.py` is idempotent: a patch that reverse-applies is already

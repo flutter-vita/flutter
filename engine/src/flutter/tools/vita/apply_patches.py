@@ -2,7 +2,7 @@
 """Apply the Vita port's patches to the DEPS-managed trees.
 
 The engine's own Vita changes are commits on this branch. The Dart SDK, zlib,
-Skia, abseil and BoringSSL are not files of this repository: DEPS names their
+Skia and BoringSSL are not files of this repository: DEPS names their
 revisions and gclient checks them out. The port changes them too (the Dart VM
 has no Vita OS layer of its own), and those changes live here as patch files,
 one directory per tree, applied by the DEPS hook that runs this script after
@@ -28,7 +28,6 @@ TREES = {
     "dart": "engine/src/flutter/third_party/dart",
     "zlib": "engine/src/flutter/third_party/zlib",
     "skia": "engine/src/flutter/third_party/skia",
-    "abseil": "engine/src/third_party/abseil-cpp",
     "boringssl": "engine/src/flutter/third_party/boringssl/src",
 }
 

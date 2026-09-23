@@ -10,6 +10,11 @@
 vars = {
   'android_git': 'https://android.googlesource.com',
   'chromium_git': 'https://chromium.googlesource.com',
+
+  # The Vita port's own forks. A dependency this port changes is checked out
+  # from here, so the change is a commit with a message and a blame instead of
+  # a patch file applied by a hook.
+  'vita_git': 'https://github.com/flutter-vita',
   'swiftshader_git': 'https://swiftshader.googlesource.com',
   'dart_git': 'https://dart.googlesource.com',
   'flutter_git': 'https://flutter.googlesource.com',
@@ -218,6 +223,9 @@ gclient_gn_args = [
 # Only these hosts are allowed for dependencies in this DEPS file.
 # If you need to add a new host, contact chrome infrastructure team.
 allowed_hosts = [
+  # The Vita port's forks of the dependencies it changes. Each one is the
+  # upstream tree at the revision this file used to name, plus one commit.
+  'github.com',
   'boringssl.googlesource.com',
   'chrome-infra-packages.appspot.com',
   'chromium.googlesource.com',
@@ -520,8 +528,10 @@ deps = {
   'engine/src/flutter/third_party/vulkan_memory_allocator':
   Var('chromium_git') + '/external/github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator' + '@' + 'c788c52156f3ef7bc7ab769cb03c110a53ac8fcb',
 
+  # flutter-vita/abseil-cpp: chromium's 564023aa53767b5f60b3a556f0a025b7b7e8241e
+  # plus "vita: no ELF introspection, no tm_gmtoff, memalign in place of mmap".
   'engine/src/third_party/abseil-cpp':
-  Var('chromium_git') + '/chromium/src/third_party/abseil-cpp' + '@' + '564023aa53767b5f60b3a556f0a025b7b7e8241e',
+  Var('vita_git') + '/abseil-cpp.git' + '@' + '277825cb1c77558a14c1565fe7654b8d1712e116',
 
    # Dart packages
   'engine/src/flutter/third_party/pkg/archive':
