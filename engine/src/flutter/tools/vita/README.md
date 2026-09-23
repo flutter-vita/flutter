@@ -2,33 +2,46 @@
 
 This branch, `vita-3.44.8`, is Flutter 3.44.8 (`058e0af2`) plus the
 PlayStation Vita port. The engine's own changes are the commits above the
-tag. Four dependencies change too, and they are not files of this
-repository: `DEPS` names their revisions and `gclient sync` checks them
-out. Their changes live here as patch files and go in through the
-`vita_patches` hook in `DEPS`, which runs `apply_patches.py` after every
-sync.
+tag.
 
-| Directory | Tree | What the patches are |
+Five dependencies change too. They are not files of this repository: `DEPS`
+names a revision of each and `gclient sync` checks them out.
+
+Four of the five now come from forks, so their changes are commits as well.
+`DEPS` names the fork and the commit:
+
+| Dependency | Fork | The change |
 |---|---|---|
-| `patches/dart/` | `engine/src/flutter/third_party/dart` | A Vita OS layer for the Dart VM: the platform dispatch, `runtime/bin` (sockets, files, the event handler), emulated TLS, the `vm:entry-point` hooks an embedder needs, the SSL filter on the isolate |
-| `patches/zlib/` | `engine/src/flutter/third_party/zlib` | No ARMv8 paths on this ARMv7 |
-| `patches/skia/` | `engine/src/flutter/third_party/skia` | Platform detection, and no `mmap` |
-| `patches/boringssl/` | `engine/src/flutter/third_party/boringssl/src` | An entropy backend on the console's RNG |
+| abseil | `flutter-vita/abseil-cpp` | No ELF introspection, no `tm_gmtoff`, `memalign` in place of `mmap` |
+| zlib | `flutter-vita/zlib` | No ARMv8 code paths on this ARMv7 |
+| Skia | `flutter-vita/skia` | Platform detection, and a file reader in place of `mmap` |
+| BoringSSL | `flutter-vita/boringssl` | An entropy source on the console's kernel RNG |
+
+The Dart SDK is the one that is left, and it is the largest: a Vita OS layer
+for the Dart VM, 4 834 lines. Its changes are patch files here, in
+`patches/dart/`, applied to `engine/src/flutter/third_party/dart` by the
+`vita_patches` hook in `DEPS`. A fork replaces them, and then this directory
+goes away.
 
 `apply_patches.py` is idempotent: a patch that reverse-applies is already
 in and is skipped; one that neither reverse-applies nor applies stops the
 sync and names itself. `--check` reports without writing.
 
-Why patches and not forks: the Tizen port needs none of this, because
-Tizen is Linux and the VM has a Linux layer. The Vita is not Linux. A
-fork per dependency is the cleaner shape for a large series; fifteen
-patches is not yet that, and turning them into forks later is `git am`
-and one line in `DEPS`.
+Why a fork and not a patch file: a patch file is not readable work. A
+developer cannot use `git log` or `git blame` on it, cannot open a pull
+request against it, and cannot see the change beside the code it changes.
+The Tizen port needs none of this, because Tizen is Linux and the Dart VM
+has a Linux layer. The Vita is not Linux.
 
-The numbering has gaps (`dart/0005` is the zlib patch, filed by the
-component it fixes). `dart/0004` is the `runtime/` half of the port's
-GN patch: its `build/` half is not needed here, because the engine
-resolves `//build/...` to `engine/src/build` and carries its own Vita
+Each fork is the upstream tree at the revision `DEPS` named before, as one
+root commit, plus one commit with the port's change. The root commit is
+there because gclient checks a dependency out without history, and GitHub
+refuses a push from a shallow clone. The root commit's tree is identical to
+upstream's: clone the upstream address at that revision and compare.
+
+The numbering of what is left has a gap. `dart/0004` is the `runtime/` half
+of the port's GN patch. Its `build/` half is not needed here, because the
+engine resolves `//build/...` to `engine/src/build` and carries its own Vita
 toolchain in the first commit of this branch.
 
 The tool that builds apps against this engine, and the documentation,

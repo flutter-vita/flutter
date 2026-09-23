@@ -288,8 +288,10 @@ deps = {
   'engine/src/flutter/third_party/yapf':
   Var('flutter_git') + '/third_party/yapf' + '@' + '212c5b5ad8e172d2d914ae454c121c89cccbcb35',
 
+  # flutter-vita/boringssl: upstream b0ae229f686f2be70689584d1e1c6a727a2cdfab
+  # (dart_boringssl_rev) plus "vita: an entropy source on the console's kernel RNG".
   'engine/src/flutter/third_party/boringssl/src':
-  'https://boringssl.googlesource.com/boringssl.git' + '@' + Var('dart_boringssl_rev'),
+  Var('vita_git') + '/boringssl.git' + '@' + 'bcc66c794bcdfa481467264a4787327045603308',
 
   'engine/src/flutter/third_party/dart':
    Var('dart_git') + '/sdk.git' + '@' + Var('dart_revision'),
@@ -483,8 +485,10 @@ deps = {
   'engine/src/flutter/third_party/freetype2':
    Var('flutter_git') + '/third_party/freetype2' + '@' + 'be4bcb57914154fc1b9e2900bf8e4b516057e2b8',
 
+  # flutter-vita/skia: upstream skia_revision plus "vita: platform detection,
+  # and a file reader in place of mmap".
   'engine/src/flutter/third_party/skia':
-   Var('skia_git') + '/skia.git' + '@' +  Var('skia_revision'),
+   Var('vita_git') + '/skia.git' + '@' + 'ddc7429a3cadfb5bdaaf1d84fe3341d931578e0b',
 
   'engine/src/flutter/third_party/ocmock':
    Var('flutter_git') + '/third_party/ocmock' + '@' +  Var('ocmock_rev'),
@@ -501,8 +505,10 @@ deps = {
   'engine/src/flutter/third_party/wuffs':
    Var('skia_git') + '/external/github.com/google/wuffs-mirror-release-c.git' + '@' + '600cd96cf47788ee3a74b40a6028b035c9fd6a61',
 
+  # flutter-vita/zlib: chromium's 7eda07b1e067ef3fd7eea0419c88b5af45c9a776 plus
+  # "vita: no ARMv8 code paths on this ARMv7".
   'engine/src/flutter/third_party/zlib':
-   Var('chromium_git') + '/chromium/src/third_party/zlib.git' + '@' + '7eda07b1e067ef3fd7eea0419c88b5af45c9a776',
+   Var('vita_git') + '/zlib.git' + '@' + '17693b467f9ade0a3f09b599c9b0048c0cb098cf',
 
   'engine/src/flutter/third_party/cpu_features/src':
    Var('chromium_git') + '/external/github.com/google/cpu_features.git' + '@' + '936b9ab5515dead115606559502e3864958f7f6e',

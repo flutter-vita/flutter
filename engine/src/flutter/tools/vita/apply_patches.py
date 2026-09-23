@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Apply the Vita port's patches to the DEPS-managed trees.
 
-The engine's own Vita changes are commits on this branch. The Dart SDK, zlib,
-Skia and BoringSSL are not files of this repository: DEPS names their
-revisions and gclient checks them out. The port changes them too (the Dart VM
-has no Vita OS layer of its own), and those changes live here as patch files,
-one directory per tree, applied by the DEPS hook that runs this script after
-every `gclient sync`.
+The engine's own Vita changes are commits on this branch. Four dependencies
+this port changes are checked out from forks named in DEPS, so their changes
+are commits too: abseil, zlib, Skia and BoringSSL.
+
+The Dart SDK is the one that is left. It is not a file of this repository:
+DEPS names its revision and gclient checks it out. Its Vita changes live here
+as patch files, applied by the DEPS hook that runs this script after every
+`gclient sync`. A fork replaces them next; it is 4834 lines, so it goes last.
 
 Idempotent: a patch that reverse-applies is already in, and is skipped. A
 patch that neither reverse-applies nor applies stops the sync with its name,
@@ -26,9 +28,6 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", ".."))
 # Patch directory -> the tree it applies to, relative to the repository root.
 TREES = {
     "dart": "engine/src/flutter/third_party/dart",
-    "zlib": "engine/src/flutter/third_party/zlib",
-    "skia": "engine/src/flutter/third_party/skia",
-    "boringssl": "engine/src/flutter/third_party/boringssl/src",
 }
 
 
