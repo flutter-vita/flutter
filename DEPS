@@ -10,6 +10,11 @@
 vars = {
   'android_git': 'https://android.googlesource.com',
   'chromium_git': 'https://chromium.googlesource.com',
+
+  # The Vita port's own forks. A dependency this port changes is checked out
+  # from here, so the change is a commit with a message and a blame instead of
+  # a patch file applied by a hook.
+  'vita_git': 'https://github.com/flutter-vita',
   'swiftshader_git': 'https://swiftshader.googlesource.com',
   'dart_git': 'https://dart.googlesource.com',
   'flutter_git': 'https://flutter.googlesource.com',
@@ -217,6 +222,9 @@ gclient_gn_args = [
 # Only these hosts are allowed for dependencies in this DEPS file.
 # If you need to add a new host, contact chrome infrastructure team.
 allowed_hosts = [
+  # The Vita port's forks of the dependencies it changes. Each one is the
+  # upstream tree at the revision this file used to name, plus one commit.
+  'github.com',
   'boringssl.googlesource.com',
   'chrome-infra-packages.appspot.com',
   'chromium.googlesource.com',
@@ -279,14 +287,20 @@ deps = {
   'engine/src/flutter/third_party/yapf':
   Var('flutter_git') + '/third_party/yapf' + '@' + '212c5b5ad8e172d2d914ae454c121c89cccbcb35',
 
+  # flutter-vita/boringssl: upstream 2e508c973d634b3aa51b71db5062bc6b096e5031
+  # (dart_boringssl_rev) plus "vita: an entropy source on the console's kernel RNG".
   'engine/src/flutter/third_party/boringssl/src':
-  'https://boringssl.googlesource.com/boringssl.git' + '@' + Var('dart_boringssl_rev'),
+  Var('vita_git') + '/boringssl.git' + '@' + 'c719b03ba70e66d61baa193c5ee3c0e243ef520a',
 
   'engine/src/flutter/third_party/ai':
    Var('dart_git') + '/ai.git' + '@' + Var('dart_ai_rev'),
 
+  # flutter-vita/dart-sdk: upstream dart_revision plus thirteen commits with
+  # the Vita OS layer for the VM (platform dispatch, runtime/bin, emulated TLS,
+  # dart:vita, the TLS record layer on the calling isolate, the compiled-in
+  # root certificates, the SDK hash from the build).
   'engine/src/flutter/third_party/dart':
-   Var('dart_git') + '/sdk.git' + '@' + Var('dart_revision'),
+   Var('vita_git') + '/dart-sdk.git' + '@' + 'dde9ec8a905f3e2310eb1eae476f610f59e0fd59',
 
   # WARNING: Unused Dart dependencies in the list below till "WARNING:" marker are removed automatically - see create_updated_flutter_deps.py.
 
@@ -471,8 +485,10 @@ deps = {
   'engine/src/flutter/third_party/freetype2':
    Var('flutter_git') + '/third_party/freetype2' + '@' + 'be4bcb57914154fc1b9e2900bf8e4b516057e2b8',
 
+  # flutter-vita/skia: upstream skia_revision plus "vita: platform detection,
+  # and a file reader in place of mmap".
   'engine/src/flutter/third_party/skia':
-   Var('skia_git') + '/skia.git' + '@' +  Var('skia_revision'),
+   Var('vita_git') + '/skia.git' + '@' + 'ecf7f962a084537cf8a4d4105febed6d3b93a711',
 
   'engine/src/flutter/third_party/ocmock':
    Var('flutter_git') + '/third_party/ocmock' + '@' +  Var('ocmock_rev'),
@@ -489,8 +505,10 @@ deps = {
   'engine/src/flutter/third_party/wuffs':
    Var('skia_git') + '/external/github.com/google/wuffs-mirror-release-c.git' + '@' + '600cd96cf47788ee3a74b40a6028b035c9fd6a61',
 
+  # flutter-vita/zlib: chromium's 7eda07b1e067ef3fd7eea0419c88b5af45c9a776 plus
+  # "vita: no ARMv8 code paths on this ARMv7".
   'engine/src/flutter/third_party/zlib':
-   Var('chromium_git') + '/chromium/src/third_party/zlib.git' + '@' + '7eda07b1e067ef3fd7eea0419c88b5af45c9a776',
+   Var('vita_git') + '/zlib.git' + '@' + '17693b467f9ade0a3f09b599c9b0048c0cb098cf',
 
   'engine/src/flutter/third_party/cpu_features/src':
    Var('chromium_git') + '/external/github.com/google/cpu_features.git' + '@' + '936b9ab5515dead115606559502e3864958f7f6e',
@@ -516,8 +534,10 @@ deps = {
   'engine/src/flutter/third_party/vulkan_memory_allocator':
   Var('chromium_git') + '/external/github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator' + '@' + 'c788c52156f3ef7bc7ab769cb03c110a53ac8fcb',
 
+  # flutter-vita/abseil-cpp: chromium's 564023aa53767b5f60b3a556f0a025b7b7e8241e
+  # plus "vita: no ELF introspection, no tm_gmtoff, memalign in place of mmap".
   'engine/src/third_party/abseil-cpp':
-  Var('chromium_git') + '/chromium/src/third_party/abseil-cpp' + '@' + '564023aa53767b5f60b3a556f0a025b7b7e8241e',
+  Var('vita_git') + '/abseil-cpp.git' + '@' + '80fa3ea47abc9e6b36b11208a7e733ef5db899b3',
 
    # Dart packages
   'engine/src/flutter/third_party/pkg/archive':
